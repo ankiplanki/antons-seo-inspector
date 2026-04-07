@@ -1,34 +1,41 @@
 #!/bin/bash
 set -e
 
-export SENTRY_PROPERTIES="$(dirname "$0")/../sentry.properties"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROPS="$SCRIPT_DIR/../sentry.properties"
+
+if [ ! -f "$PROPS" ]; then
+  echo "Error: sentry.properties not found at $PROPS"
+  exit 1
+fi
+
+# Parse sentry.properties into individual env vars sentry-cli recognises natively
+export SENTRY_AUTH_TOKEN=$(grep '^auth.token=' "$PROPS" | cut -d= -f2-)
+export SENTRY_ORG=$(grep '^defaults.org=' "$PROPS" | cut -d= -f2-)
+export SENTRY_PROJECT=$(grep '^defaults.project=' "$PROPS" | cut -d= -f2-)
 
 # Read version from manifest.json
-VERSION=$(python3 -c "import json; print(json.load(open('manifest.json'))['version'])")
+VERSION=$(python3 -c "import json; print(json.load(open('$SCRIPT_DIR/../manifest.json'))['version'])")
 RELEASE="link-status-scanner@$VERSION"
 
 echo "Creating Sentry release: $RELEASE"
 
-# Create and finalize the release
 sentry-cli releases new "$RELEASE"
 
-# Upload source maps for the Sentry SDK bundle
-sentry-cli sourcemaps upload vendor/ \
+sentry-cli sourcemaps upload "$SCRIPT_DIR/../vendor/" \
   --release "$RELEASE" \
   --url-prefix "~/vendor/"
 
-# Upload our own JS files (unminified — associates them with the release)
-sentry-cli sourcemaps upload popup/ \
+sentry-cli sourcemaps upload "$SCRIPT_DIR/../popup/" \
   --release "$RELEASE" \
   --url-prefix "~/popup/" \
   --ext js
 
-sentry-cli sourcemaps upload background/ \
+sentry-cli sourcemaps upload "$SCRIPT_DIR/../background/" \
   --release "$RELEASE" \
   --url-prefix "~/background/" \
   --ext js
 
-# Finalize the release
 sentry-cli releases finalize "$RELEASE"
 
 echo "Done. Release $RELEASE finalized in Sentry."

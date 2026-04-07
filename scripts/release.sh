@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROPS="$SCRIPT_DIR/../sentry.properties"
@@ -41,12 +41,12 @@ upload_sourcemaps "$SCRIPT_DIR/../vendor/" \
 sentry-cli sourcemaps upload "$SCRIPT_DIR/../popup/" \
   --release "$RELEASE" \
   --url-prefix "~/popup/" \
-  --ext js
+  --ext js 2>&1 | grep -v "warning:"
 
 sentry-cli sourcemaps upload "$SCRIPT_DIR/../background/" \
   --release "$RELEASE" \
   --url-prefix "~/background/" \
-  --ext js
+  --ext js 2>&1 | grep -v "warning:"
 
 sentry-cli releases finalize "$RELEASE"
 

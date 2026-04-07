@@ -1,3 +1,8 @@
+Sentry.init({
+  dsn: "https://e1da536eab1acb8fabb634aa50cc85bf@o4508716372197376.ingest.us.sentry.io/4511180549128192",
+  release: "link-status-scanner@1.0.0",
+});
+
 // Map of status code -> result object
 const results = new Map();
 let port = null;

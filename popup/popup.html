@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Link Status Scanner</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="header">
+    <span class="title">Link Status Scanner</span>
+    <div class="header-actions">
+      <button id="copyAll" class="btn btn-secondary" hidden>Copy All</button>
+      <button id="stopBtn" class="btn btn-danger" hidden>Stop</button>
+      <button id="scanBtn" class="btn btn-primary">Scan Page</button>
+    </div>
+  </div>
+
+  <div id="progress" class="progress-container" hidden>
+    <div class="progress-bar-wrap">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+    <span id="progressText" class="progress-text">0 / 0</span>
+  </div>
+
+  <div id="status" class="status-msg"></div>
+
+  <div id="results"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

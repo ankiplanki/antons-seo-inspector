@@ -41,12 +41,14 @@ upload_sourcemaps "$SCRIPT_DIR/../vendor/" \
 sentry-cli sourcemaps upload "$SCRIPT_DIR/../popup/" \
   --release "$RELEASE" \
   --url-prefix "~/popup/" \
-  --ext js 2>&1 | grep -v "warning:"
+  --ext js \
+  --no-sourcemap-reference
 
 sentry-cli sourcemaps upload "$SCRIPT_DIR/../background/" \
   --release "$RELEASE" \
   --url-prefix "~/background/" \
-  --ext js 2>&1 | grep -v "warning:"
+  --ext js \
+  --no-sourcemap-reference
 
 sentry-cli releases finalize "$RELEASE"
 

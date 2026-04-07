@@ -121,7 +121,7 @@ function escHtml(str) {
 
 async function copyGroup(groupKey, btn) {
   const urls = [...results.values()]
-    .filter((r) => getStatusGroup(r.status, r.redirected) === groupKey)
+    .filter((r) => r.status !== null && getStatusGroup(r.status, r.redirected) === groupKey)
     .map((r) => r.url);
   await copyToClipboard(urls.join("\n"), btn);
 }
@@ -142,10 +142,12 @@ async function copyToClipboard(text, btn) {
 }
 
 copyAllBtn.addEventListener("click", () => {
-  const lines = [...results.values()].map((r) => {
-    const status = r.status === 0 ? "ERR" : r.status;
-    return `[${status}] ${r.url}`;
-  });
+  const lines = [...results.values()]
+    .filter((r) => r.status !== null)
+    .map((r) => {
+      const status = r.status === 0 ? "ERR" : r.status;
+      return `[${status}] ${r.url}`;
+    });
   copyToClipboard(lines.join("\n"), copyAllBtn);
 });
 
@@ -244,6 +246,9 @@ function setScanningState(active) {
 
 function saveToSession() {
   const data = [...results.values()];
+  const bytes = new TextEncoder().encode(JSON.stringify(data)).length;
+  // chrome.storage.session has a 10MB quota — skip caching if we'd exceed 9MB
+  if (bytes > 9 * 1024 * 1024) return;
   chrome.storage.session.set({ lastScan: data }).catch(() => {});
 }
 
@@ -278,7 +283,7 @@ function extractAllUrls() {
 
   function parseSrcset(srcset, source) {
     if (!srcset) return;
-    srcset.split(",").forEach((part) => {
+    srcset.split(/,(?=\s)/).forEach((part) => {
       const trimmed = part.trim().split(/\s+/)[0];
       if (trimmed) addUrl(trimmed, source);
     });

@@ -16,7 +16,7 @@ function extractAllUrls() {
 
   function parseSrcset(srcset, source) {
     if (!srcset) return;
-    srcset.split(",").forEach((part) => {
+    srcset.split(/,(?=\s)/).forEach((part) => {
       const trimmed = part.trim().split(/\s+/)[0];
       if (trimmed) addUrl(trimmed, source);
     });

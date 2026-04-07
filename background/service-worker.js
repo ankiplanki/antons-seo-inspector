@@ -1,15 +1,20 @@
 const CONCURRENCY = 10;
 const TIMEOUT_MS = 10000;
 
-async function checkUrl(url) {
-  const check = async (method) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+async function checkUrl(url, scanSignal) {
+  const check = async (method, withCredentials) => {
+    const timeoutController = new AbortController();
+    const timer = setTimeout(() => timeoutController.abort(), TIMEOUT_MS);
+
+    // Combine per-request timeout with the scan-level abort signal
+    scanSignal.addEventListener("abort", () => timeoutController.abort(), { once: true });
+
     try {
       const response = await fetch(url, {
         method,
         redirect: "follow",
-        signal: controller.signal,
+        credentials: withCredentials ? "include" : "omit",
+        signal: timeoutController.signal,
       });
       clearTimeout(timer);
       return {
@@ -26,12 +31,14 @@ async function checkUrl(url) {
   };
 
   try {
-    const result = await check("HEAD");
+    const result = await check("HEAD", true);
     if (result.status === 405) {
-      return await check("GET");
+      return await check("GET", false);
     }
     return result;
   } catch (err) {
+    // Distinguish scan-stopped from per-request timeout
+    if (scanSignal.aborted) return null;
     return {
       url,
       finalUrl: url,
@@ -42,7 +49,7 @@ async function checkUrl(url) {
   }
 }
 
-async function processUrls(urls, port) {
+async function processUrls(urls, port, scanSignal) {
   let index = 0;
   let active = 0;
   let done = 0;
@@ -53,17 +60,22 @@ async function processUrls(urls, port) {
       while (active < CONCURRENCY && index < total) {
         const url = urls[index++];
         active++;
-        checkUrl(url).then((result) => {
+        checkUrl(url, scanSignal).then((result) => {
           active--;
           done++;
-          try {
-            port.postMessage({ type: "result", data: result, done, total });
-          } catch {
-            // port disconnected
+
+          // null result means scan was stopped — drain remaining active fetches silently
+          if (result !== null) {
+            try {
+              port.postMessage({ type: "result", data: result, done, total });
+            } catch {
+              // port disconnected
+            }
           }
+
           if (done === total) {
             try {
-              port.postMessage({ type: "done", total });
+              if (!scanSignal.aborted) port.postMessage({ type: "done", total });
             } catch {}
             resolve();
           } else {
@@ -79,10 +91,16 @@ async function processUrls(urls, port) {
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "scan") return;
 
+  const scanController = new AbortController();
+
+  port.onDisconnect.addListener(() => {
+    scanController.abort();
+  });
+
   port.onMessage.addListener(async (msg) => {
     if (msg.action === "checkUrls") {
       const urls = msg.urls.map((u) => u.url);
-      await processUrls(urls, port);
+      await processUrls(urls, port, scanController.signal);
     }
   });
 });

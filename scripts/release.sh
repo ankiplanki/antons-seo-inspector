@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+export SENTRY_PROPERTIES="$(dirname "$0")/../sentry.properties"
+
 # Read version from manifest.json
 VERSION=$(python3 -c "import json; print(json.load(open('manifest.json'))['version'])")
 RELEASE="link-status-scanner@$VERSION"

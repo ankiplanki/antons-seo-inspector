@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Link Status Scanner",
+  "name": "Anton's SEO Inspector",
   "version": "1.0.0",
-  "description": "Scan all URLs on a page and check their HTTP status codes.",
+  "description": "Check page indexability signals (robots.txt, meta robots, canonical) and scan all URLs on a page for their HTTP status codes.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -13,7 +13,14 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background/service-worker.js"
+    "service_worker": "background/service-worker.js",
+    "scripts": ["background/service-worker.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "antons-seo-inspector@example.com",
+      "strict_min_version": "115.0"
+    }
   },
   "action": {
     "default_popup": "popup/popup.html",

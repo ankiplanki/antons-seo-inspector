@@ -16,7 +16,7 @@ export SENTRY_PROJECT=$(grep '^defaults.project=' "$PROPS" | cut -d= -f2-)
 
 # Read version from manifest.json
 VERSION=$(python3 -c "import json; print(json.load(open('$SCRIPT_DIR/../manifest.json'))['version'])")
-RELEASE="link-status-scanner@$VERSION"
+RELEASE="antons-seo-inspector@$VERSION"
 
 echo "Creating Sentry release: $RELEASE"
 

@@ -3,15 +3,18 @@ Sentry.init({
   release: "link-status-scanner@1.0.0",
 });
 
-// Map of status code -> result object
+// Map of url -> result object
 const results = new Map();
 let port = null;
 let scanning = false;
 let stopped = false;
+let currentTabId = null;
+let highlightsActive = false;
 
 const scanBtn = document.getElementById("scanBtn");
 const stopBtn = document.getElementById("stopBtn");
 const copyAllBtn = document.getElementById("copyAll");
+const highlightBtn = document.getElementById("highlightBtn");
 const progressEl = document.getElementById("progress");
 const progressBar = document.getElementById("progressBar");
 const progressText = document.getElementById("progressText");
@@ -36,6 +39,21 @@ const GROUP_META = {
 };
 
 const GROUP_ORDER = ["4xx", "5xx", "err", "3xx", "2xx"];
+
+const TYPE_LABELS = {
+  link: "A",
+  img: "IMG",
+  script: "JS",
+  "link-tag": "LINK",
+  iframe: "iframe",
+  video: "video",
+  audio: "audio",
+  source: "source",
+  object: "object",
+  embed: "embed",
+  form: "form",
+  area: "area",
+};
 
 // Group elements cache
 const groupEls = {};
@@ -101,13 +119,17 @@ function addResultRow(result) {
   row.className = "url-row";
 
   const badgeText = result.status === 0 ? "ERR" : result.status;
-  const displayUrl = result.url;
+  const typeLabel = TYPE_LABELS[result.type] || result.type || "";
+  const hasAnchorText = result.type === "link" && result.anchorText;
 
   row.innerHTML = `
     <div class="url-main">
       <span class="status-badge ${meta.badgeCls}">${badgeText}</span>
-      <span class="url-text" title="${escHtml(displayUrl)}">${escHtml(displayUrl)}</span>
+      ${typeLabel ? `<span class="type-badge">${escHtml(typeLabel)}</span>` : ""}
+      <span class="url-text" title="${escHtml(result.url)}">${escHtml(result.url)}</span>
+      ${result.elementId != null ? `<button class="scroll-btn" title="Find on page">↗</button>` : ""}
     </div>
+    ${hasAnchorText ? `<div class="anchor-text">"${escHtml(result.anchorText)}"</div>` : ""}
     ${result.redirected && result.finalUrl !== result.url ? `
       <div class="url-redirect">
         <span class="redirect-arrow">↳</span>
@@ -117,12 +139,110 @@ function addResultRow(result) {
     ${result.error ? `<div class="error-text">${escHtml(result.error)}</div>` : ""}
   `;
 
+  if (result.elementId != null) {
+    row.querySelector(".scroll-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      scrollToElement(result.elementId);
+    });
+  }
+
   g.body.appendChild(row);
 }
 
 function escHtml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
+
+async function scrollToElement(elementId) {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (id) => {
+        const el = document.querySelector(`[data-lss-id="${id}"]`);
+        if (!el) return;
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        const prevOutline = el.style.outline;
+        const prevOffset = el.style.outlineOffset;
+        el.style.outline = "3px solid #2563eb";
+        el.style.outlineOffset = "3px";
+        setTimeout(() => {
+          el.style.outline = prevOutline;
+          el.style.outlineOffset = prevOffset;
+        }, 2000);
+      },
+      args: [elementId],
+    });
+  } catch (err) {
+    statusEl.textContent = `Could not scroll to element: ${err.message}`;
+  }
+}
+
+async function applyHighlights() {
+  if (!currentTabId) return;
+  const data = [...results.values()]
+    .filter((r) => r.status !== null)
+    .map((r) => ({ url: r.url, group: getStatusGroup(r.status, r.redirected) }));
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: currentTabId },
+      func: (resultsData) => {
+        // Clear previous highlights
+        document.querySelectorAll("[data-lss-highlight]").forEach((el) => {
+          el.style.removeProperty("outline");
+          el.style.removeProperty("outline-offset");
+          el.removeAttribute("data-lss-highlight");
+        });
+        const colorMap = {
+          "2xx": "#22c55e",
+          "3xx": "#f59e0b",
+          "4xx": "#ef4444",
+          "5xx": "#dc2626",
+          "err": "#8b5cf6",
+        };
+        const urlGroups = Object.fromEntries(resultsData.map((r) => [r.url, r.group]));
+        document.querySelectorAll("a[href]").forEach((el) => {
+          let absolute;
+          try { absolute = new URL(el.getAttribute("href"), document.baseURI).href; } catch { return; }
+          const group = urlGroups[absolute];
+          const color = colorMap[group];
+          if (color) {
+            el.style.outline = `2px solid ${color}`;
+            el.style.outlineOffset = "2px";
+            el.setAttribute("data-lss-highlight", group);
+          }
+        });
+      },
+      args: [data],
+    });
+    highlightsActive = true;
+    highlightBtn.textContent = "Clear Highlights";
+  } catch {}
+}
+
+async function clearHighlights() {
+  if (!currentTabId) return;
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: currentTabId },
+      func: () => {
+        document.querySelectorAll("[data-lss-highlight]").forEach((el) => {
+          el.style.removeProperty("outline");
+          el.style.removeProperty("outline-offset");
+          el.removeAttribute("data-lss-highlight");
+        });
+      },
+    });
+  } catch {}
+  highlightsActive = false;
+  highlightBtn.textContent = "Highlight Links";
+}
+
+highlightBtn.addEventListener("click", () => {
+  if (highlightsActive) clearHighlights();
+  else applyHighlights();
+});
 
 async function copyGroup(groupKey, btn) {
   const urls = [...results.values()]
@@ -176,6 +296,9 @@ async function startScan() {
   resultsEl.innerHTML = "";
   Object.keys(groupEls).forEach((k) => delete groupEls[k]);
   stopped = false;
+  highlightsActive = false;
+  highlightBtn.hidden = true;
+  highlightBtn.textContent = "Highlight Links";
   statusEl.textContent = "Extracting URLs…";
   setScanningState(true);
   progressEl.removeAttribute("hidden");
@@ -183,13 +306,15 @@ async function startScan() {
   progressText.textContent = "0 / 0";
   copyAllBtn.hidden = true;
 
-  let tabId;
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    tabId = tab.id;
+    currentTabId = tab.id;
+
+    // Clear any previous highlights before new scan
+    await clearHighlights();
 
     const [injection] = await chrome.scripting.executeScript({
-      target: { tabId },
+      target: { tabId: currentTabId },
       func: extractAllUrls,
     });
 
@@ -205,7 +330,7 @@ async function startScan() {
     statusEl.textContent = `Found ${urlItems.length} URLs. Checking…`;
     progressText.textContent = `0 / ${urlItems.length}`;
 
-    // Save url metadata for copy purposes
+    // Save url metadata (type, anchorText, elementId) keyed by url
     urlItems.forEach((item) => results.set(item.url, { ...item, status: null }));
 
     if (port) port.disconnect();
@@ -213,8 +338,11 @@ async function startScan() {
 
     port.onMessage.addListener((msg) => {
       if (msg.type === "result") {
-        results.set(msg.data.url, msg.data);
-        addResultRow(msg.data);
+        // Merge scan result with existing metadata (type, anchorText, elementId)
+        const existing = results.get(msg.data.url) || {};
+        const merged = { ...existing, ...msg.data };
+        results.set(msg.data.url, merged);
+        addResultRow(merged);
         const pct = Math.round((msg.done / msg.total) * 100);
         progressBar.style.width = pct + "%";
         progressText.textContent = `${msg.done} / ${msg.total}`;
@@ -223,7 +351,9 @@ async function startScan() {
         statusEl.textContent = `Scan complete — ${msg.total} URLs checked.`;
         setScanningState(false);
         copyAllBtn.hidden = false;
+        highlightBtn.hidden = false;
         saveToSession();
+        applyHighlights();
       }
     });
 
@@ -261,14 +391,18 @@ async function loadFromSession() {
   try {
     const stored = await chrome.storage.session.get("lastScan");
     if (stored.lastScan && stored.lastScan.length > 0) {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      currentTabId = tab.id;
       stored.lastScan.forEach((r) => {
         if (r.status !== null) {
           results.set(r.url, r);
           addResultRow(r);
         }
       });
-      statusEl.textContent = `Last scan: ${stored.lastScan.filter((r) => r.status !== null).length} URLs. Click Scan Page to refresh.`;
+      const count = stored.lastScan.filter((r) => r.status !== null).length;
+      statusEl.textContent = `Last scan: ${count} URLs. Click Scan Page to refresh.`;
       copyAllBtn.hidden = false;
+      highlightBtn.hidden = false;
     }
   } catch {}
 }
@@ -276,21 +410,35 @@ async function loadFromSession() {
 // The extracted function runs in the page context
 function extractAllUrls() {
   const urlMap = new Map();
+  let idCounter = 0;
 
-  function addUrl(url, source) {
+  function addUrl(url, source, el) {
     if (!url) return;
     let absolute;
     try { absolute = new URL(url, document.baseURI).href; } catch { return; }
     if (!absolute.startsWith("http://") && !absolute.startsWith("https://")) return;
-    if (!urlMap.has(absolute)) urlMap.set(absolute, new Set());
-    urlMap.get(absolute).add(source);
+
+    if (!urlMap.has(absolute)) {
+      let elementId = null;
+      if (el) {
+        if (!el.dataset.lssId) el.dataset.lssId = String(idCounter++);
+        elementId = el.dataset.lssId;
+      }
+      const anchorText = (source === "link" && el)
+        ? (el.textContent.trim().slice(0, 100) || null)
+        : null;
+      urlMap.set(absolute, { sources: [source], anchorText, elementId });
+    } else {
+      const entry = urlMap.get(absolute);
+      if (!entry.sources.includes(source)) entry.sources.push(source);
+    }
   }
 
-  function parseSrcset(srcset, source) {
+  function parseSrcset(srcset, source, el) {
     if (!srcset) return;
     srcset.split(/,(?=\s)/).forEach((part) => {
       const trimmed = part.trim().split(/\s+/)[0];
-      if (trimmed) addUrl(trimmed, source);
+      if (trimmed) addUrl(trimmed, source, el);
     });
   }
 
@@ -314,14 +462,17 @@ function extractAllUrls() {
   for (const { selector, attr, label, isSrcset } of selectors) {
     document.querySelectorAll(selector).forEach((el) => {
       const val = el.getAttribute(attr);
-      if (isSrcset) parseSrcset(val, label);
-      else addUrl(val, label);
+      if (isSrcset) parseSrcset(val, label, el);
+      else addUrl(val, label, el);
     });
   }
 
-  return Array.from(urlMap.entries()).map(([url, sources]) => ({
+  return Array.from(urlMap.entries()).map(([url, data]) => ({
     url,
-    sources: Array.from(sources),
+    sources: data.sources,
+    type: data.sources[0],
+    anchorText: data.anchorText,
+    elementId: data.elementId,
   }));
 }
 

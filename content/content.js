@@ -1,7 +1,8 @@
 function extractAllUrls() {
-  const urlMap = new Map(); // url -> Set of sources
+  const urlMap = new Map();
+  let idCounter = 0;
 
-  function addUrl(url, source) {
+  function addUrl(url, source, el) {
     if (!url) return;
     let absolute;
     try {
@@ -10,15 +11,28 @@ function extractAllUrls() {
       return;
     }
     if (!absolute.startsWith("http://") && !absolute.startsWith("https://")) return;
-    if (!urlMap.has(absolute)) urlMap.set(absolute, new Set());
-    urlMap.get(absolute).add(source);
+
+    if (!urlMap.has(absolute)) {
+      let elementId = null;
+      if (el) {
+        if (!el.dataset.lssId) el.dataset.lssId = String(idCounter++);
+        elementId = el.dataset.lssId;
+      }
+      const anchorText = (source === "link" && el)
+        ? (el.textContent.trim().slice(0, 100) || null)
+        : null;
+      urlMap.set(absolute, { sources: [source], anchorText, elementId });
+    } else {
+      const entry = urlMap.get(absolute);
+      if (!entry.sources.includes(source)) entry.sources.push(source);
+    }
   }
 
-  function parseSrcset(srcset, source) {
+  function parseSrcset(srcset, source, el) {
     if (!srcset) return;
     srcset.split(/,(?=\s)/).forEach((part) => {
       const trimmed = part.trim().split(/\s+/)[0];
-      if (trimmed) addUrl(trimmed, source);
+      if (trimmed) addUrl(trimmed, source, el);
     });
   }
 
@@ -43,15 +57,18 @@ function extractAllUrls() {
     document.querySelectorAll(selector).forEach((el) => {
       const val = el.getAttribute(attr);
       if (isSrcset) {
-        parseSrcset(val, label);
+        parseSrcset(val, label, el);
       } else {
-        addUrl(val, label);
+        addUrl(val, label, el);
       }
     });
   }
 
-  return Array.from(urlMap.entries()).map(([url, sources]) => ({
+  return Array.from(urlMap.entries()).map(([url, data]) => ({
     url,
-    sources: Array.from(sources),
+    sources: data.sources,
+    type: data.sources[0],
+    anchorText: data.anchorText,
+    elementId: data.elementId,
   }));
 }

@@ -243,3 +243,46 @@ body {
   color: #9ca3af;
   padding-left: 42px;
 }
+
+.type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  white-space: nowrap;
+  min-width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.anchor-text {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+  padding-left: 42px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 430px;
+}
+
+.scroll-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 1px 5px;
+  font-size: 11px;
+  background: transparent;
+  color: #9ca3af;
+  border: 1px solid #e5e7eb;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.scroll-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
+}

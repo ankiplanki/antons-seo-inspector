@@ -12,11 +12,20 @@
   </div>
 
   <nav class="tabs">
-    <button class="tab active" data-tab="indexability">Indexability</button>
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="indexability">Indexability</button>
     <button class="tab" data-tab="link-scanner">Link Scanner</button>
   </nav>
 
-  <div id="panel-indexability" class="tab-panel active">
+  <div id="panel-overview" class="tab-panel active">
+    <div class="header-actions">
+      <button id="ovScanBtn" class="btn btn-primary">Scan</button>
+    </div>
+    <div id="ovStatus" class="status-msg"></div>
+    <div id="ovResults"></div>
+  </div>
+
+  <div id="panel-indexability" class="tab-panel">
     <div class="header-actions">
       <button id="idxScanBtn" class="btn btn-primary">Scan</button>
     </div>
@@ -47,6 +56,7 @@
 
   <script src="../vendor/sentry.min.js"></script>
   <script src="popup.js"></script>
+  <script src="overview.js"></script>
   <script src="indexability.js"></script>
   <script src="link-scanner.js"></script>
 </body>

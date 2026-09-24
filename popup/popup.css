@@ -68,6 +68,95 @@ body {
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
+/* Overview panel */
+.ov-grid {
+  padding: 4px 14px;
+}
+
+.ov-row {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.ov-label {
+  width: 84px;
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 12px;
+  color: #374151;
+}
+
+.ov-value {
+  font-size: 12px;
+  color: #1a1a1a;
+  flex: 1;
+  word-break: break-word;
+}
+
+.ov-value.missing {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.ov-value.pass { color: #16a34a; }
+.ov-value.warn { color: #dc2626; }
+
+.ov-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 10px 14px;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.ov-count {
+  text-align: center;
+  min-width: 36px;
+}
+
+.ov-count-value {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+}
+
+.ov-count-label {
+  font-size: 10px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.ov-links-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 14px;
+}
+
+.ov-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 12px;
+}
+.ov-link:hover { text-decoration: underline; }
+
+.ov-link.disabled {
+  color: #9ca3af;
+  cursor: default;
+  pointer-events: none;
+  text-decoration: none;
+}
+
+.ov-links-sep {
+  color: #d1d5db;
+  font-size: 12px;
+}
+
 /* Indexability signals */
 .idx-summary {
   padding: 0 14px 8px;

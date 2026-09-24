@@ -1,8 +1,15 @@
 # Anton's SEO Inspector
 
-A browser extension (Chrome and Firefox) with two SEO checks in one popup: an **Indexability** check for the current page, and a **Link Scanner** that scans every URL on the page and reports its HTTP status code.
+A browser extension (Chrome and Firefox) with three SEO checks in one popup: an **Overview** of the page's meta tags and content, an **Indexability** check for the current page, and a **Link Scanner** that scans every URL on the page and reports its HTTP status code.
 
 ## Features
+
+### Overview
+- **Title & Description** — shown with character counts, flagged when too short/too long
+- **Keywords, Canonical, Robots Tag, Author, Publisher, Lang** — read straight from the page's meta tags
+- **Heading, image, and link counts** — H1–H6, `<img>`, and `<a href>` totals
+- **Robots.txt / Sitemap.xml links** — links directly to the page's `robots.txt`, and to whatever sitemap is declared via a `Sitemap:` directive inside it (not a guessed `/sitemap.xml`); shown as not-found when either doesn't exist
+- Runs automatically when you open the popup, with a **Scan** button to re-check
 
 ### Indexability Checker
 - **HTTP status** of the current page
@@ -58,11 +65,15 @@ Note: temporarily loaded add-ons are removed when Firefox restarts. A persistent
 
 1. Navigate to any page you want to audit
 2. Click the extension icon
-3. The **Indexability** tab checks the current page automatically — click **Scan** to re-check
-4. Switch to the **Link Scanner** tab and click **Scan Page** to check every URL on the page
+3. The **Overview** tab checks the current page automatically — click **Scan** to re-check
+4. Switch to the **Indexability** tab to check crawlability signals, or **Link Scanner** and click **Scan Page** to check every URL on the page
 5. Link Scanner results appear grouped by status code as checks complete; use **Copy URLs** on any group to export that list, or **Copy All** for everything
 
 ## How it works
+
+### Overview
+- DOM signals (title, meta tags, canonical, heading/image/link counts) are read from the live page via `scripting.executeScript`
+- The background script fetches `robots.txt` and parses it for a `Sitemap:` directive — the Sitemap.xml link only appears if one is explicitly declared there
 
 ### Indexability
 - DOM signals (meta robots tags, canonical URL) are read from the live page via `scripting.executeScript`

@@ -217,6 +217,36 @@ async function checkRobotsTxt(origin, pathname) {
   }
 }
 
+function extractSitemapUrls(text) {
+  const urls = [];
+  for (const raw of text.split("\n")) {
+    const line = raw.replace(/#.*$/, "").trim();
+    const match = line.match(/^sitemap:\s*(\S+)$/i);
+    if (match) urls.push(match[1]);
+  }
+  return urls;
+}
+
+async function checkRobotsAndSitemap(origin) {
+  const robotsUrl = origin + "/robots.txt";
+  try {
+    const res = await fetchWithTimeout(robotsUrl);
+    if (!res.ok) {
+      return { robots: { exists: false, url: robotsUrl }, sitemap: { exists: false, url: null } };
+    }
+    const text = await res.text();
+    const sitemapUrls = extractSitemapUrls(text);
+    return {
+      robots: { exists: true, url: robotsUrl },
+      sitemap: sitemapUrls.length
+        ? { exists: true, url: sitemapUrls[0] }
+        : { exists: false, url: null },
+    };
+  } catch {
+    return { robots: { exists: false, url: robotsUrl }, sitemap: { exists: false, url: null } };
+  }
+}
+
 async function checkPageHeaders(url) {
   try {
     const res = await fetchWithTimeout(url, { method: "GET", redirect: "follow" });
@@ -251,15 +281,25 @@ async function checkPageHeaders(url) {
 }
 
 api.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.action !== "indexability-scan") return;
+  if (msg.action === "indexability-scan") {
+    const url = new URL(msg.url);
+    const origin = url.origin;
+    const pathname = url.pathname + url.search;
 
-  const url = new URL(msg.url);
-  const origin = url.origin;
-  const pathname = url.pathname + url.search;
+    Promise.all([checkRobotsTxt(origin, pathname), checkPageHeaders(msg.url)])
+      .then(([robotsTxt, pageHeaders]) => sendResponse({ robotsTxt, ...pageHeaders }))
+      .catch((err) => sendResponse({ error: err.message }));
 
-  Promise.all([checkRobotsTxt(origin, pathname), checkPageHeaders(msg.url)])
-    .then(([robotsTxt, pageHeaders]) => sendResponse({ robotsTxt, ...pageHeaders }))
-    .catch((err) => sendResponse({ error: err.message }));
+    return true; // keep sendResponse channel open for async work
+  }
 
-  return true; // keep sendResponse channel open for async work
+  if (msg.action === "overview-scan") {
+    const origin = new URL(msg.url).origin;
+
+    checkRobotsAndSitemap(origin)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
+
+    return true; // keep sendResponse channel open for async work
+  }
 });

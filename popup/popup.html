@@ -14,6 +14,7 @@
   <nav class="tabs">
     <button class="tab active" data-tab="overview">Overview</button>
     <button class="tab" data-tab="indexability">Indexability</button>
+    <button class="tab" data-tab="headers">Headers</button>
     <button class="tab" data-tab="link-scanner">Link Scanner</button>
   </nav>
 
@@ -32,6 +33,15 @@
     <div id="idxStatus" class="status-msg"></div>
     <div id="idxSummary" class="idx-summary"></div>
     <div id="idxResults"></div>
+  </div>
+
+  <div id="panel-headers" class="tab-panel">
+    <div class="header-actions">
+      <button id="hdScanBtn" class="btn btn-primary">Scan</button>
+    </div>
+    <div id="hdStatus" class="status-msg"></div>
+    <div id="hdCounts" class="ov-counts"></div>
+    <div id="hdResults" class="hd-list"></div>
   </div>
 
   <div id="panel-link-scanner" class="tab-panel">
@@ -58,6 +68,7 @@
   <script src="popup.js"></script>
   <script src="overview.js"></script>
   <script src="indexability.js"></script>
+  <script src="headers.js"></script>
   <script src="link-scanner.js"></script>
 </body>
 </html>

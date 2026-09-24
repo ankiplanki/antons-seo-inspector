@@ -157,6 +157,56 @@ body {
   font-size: 12px;
 }
 
+/* Headers panel */
+.hd-list {
+  padding: 6px 14px 10px;
+}
+
+.hd-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.hd-level-1 { padding-left: 0; }
+.hd-level-2 { padding-left: 16px; }
+.hd-level-3 { padding-left: 32px; }
+.hd-level-4 { padding-left: 48px; }
+.hd-level-5 { padding-left: 64px; }
+.hd-level-6 { padding-left: 80px; }
+
+.hd-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  min-width: 24px;
+  text-align: center;
+}
+
+.hd-level-1 .hd-tag { background: #dbeafe; color: #1e3a8a; }
+
+.hd-text {
+  font-size: 12px;
+  color: #1a1a1a;
+  flex: 1;
+  word-break: break-word;
+}
+
+.hd-level-1 .hd-text { font-weight: 600; }
+
+.hd-empty {
+  padding: 20px 14px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
 /* Indexability signals */
 .idx-summary {
   padding: 0 14px 8px;

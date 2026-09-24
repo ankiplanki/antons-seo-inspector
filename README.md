@@ -88,4 +88,4 @@ Note: temporarily loaded add-ons are removed when Firefox restarts. A persistent
 
 ## License
 
-MIT
+GPL-3.0 — see [LICENSE](LICENSE). Anyone who redistributes this extension, modified or not, must keep it open source under the same license.
